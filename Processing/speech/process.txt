@@ -1,0 +1,52 @@
+processing 0 14 8
+0 MBP
+2 etc
+4 AI
+6 etc
+8 E
+9 etc
+11 AI
+13 etc
+is 15 19 2
+15 AI
+18 etc
+great 20 26 4
+20 etc
+22 etc
+24 E
+25 etc
+software. 27 40 7
+27 etc
+29 O
+31 FV
+33 etc
+35 WQ
+37 E
+39 etc
+this 49 52 3
+49 etc
+50 AI
+52 etc
+text 55 59 5
+55 etc
+56 E
+57 etc
+58 etc
+59 etc
+has 64 67 3
+64 etc
+65 AI
+67 etc
+been 69 73 3
+69 MBP
+71 AI
+72 etc
+generated. 74 84 8
+74 etc
+75 E
+77 etc
+78 E
+80 E
+81 etc
+82 AI
+84 etc
