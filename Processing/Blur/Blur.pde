@@ -1,6 +1,6 @@
 
-float A = 0.2f; // acceleration range
-float V_MAX = 2.5f; // velocity max
+float A = 0.02f; // acceleration range
+float V_MAX = 2.0f; // velocity max
 float V_MIN = -V_MAX; // velocity min
 
 
@@ -28,23 +28,48 @@ class Fly {
   }
 
   void set_colors() {
-    if (random(1.0f) < 0.4f) {
+    int index = (int)(random(1.0f)*2);
+    
+    if(index == 0) {
       color1 = color(255, 0, 255);
       color2 = color(0, 255, 255);
-    } else {
+    } else if(index == 1){
       color1 = color(255, 0, 0);
       color2 = color(255, 255, 0);
+    }
+    else {
+      color1 = color(0, 255, 0);
+      color2 = color(200, 200, 200);
     }
   }
 
   void rand_acc() {
-    ax = random(-A, A);
-    ay = random(-A, A);
+    int xmid = width/2;
+    int ymid = height/2;
+    
+    float xsign;
+    if(x <= xmid) {
+        xsign = 1;
+    }
+    else {
+        xsign = -1;
+    }
+    
+    float ysign;
+    if(y <= ymid) {
+        ysign = 1;
+    }
+    else {
+        ysign = -1;
+    }
+  
+    ax = xsign * random(0,A);
+    ay = ysign * random(0,A);
   }
 
   void update() {
 
-    if (random(1.0f) < 0.15f) {
+    if (random(1.0f) < 0.2f) {
       rand_acc();
     }
 
@@ -59,6 +84,8 @@ class Fly {
     x += vx;
     y += vy;
 
+    // x = (x + width) % width;
+    // y = (y + height) % height;
     x = constrain(x, 0, width-1);
     y = constrain(y, 0, height-1);
   }
@@ -68,13 +95,13 @@ class Fly {
     fill(255);
 
     float v = max(abs(vx), abs(vy)); // velocity measure
-    float r = map(v, 0, V_MAX, 1, 10); // radius
+    float r = map(v, 0, V_MAX, 3, 10); // radius
 
     // Color
     float j = map(v, 0, V_MAX, 0, 1.0f);
     color inter = lerpColor(color1, color2, j);
 
-    int alpha = (int)map(v, 0, V_MAX, 20, 255);    
+    int alpha = (int)map(v, 0, V_MAX, 100, 255);    
     fill(inter, alpha);
     ellipse(x, y, r, r);
   }
@@ -82,10 +109,10 @@ class Fly {
 
 //---------------------------------------
 
-Fly []flies = new Fly[30];
+Fly []flies = new Fly[60];
 
 void setup() {
-  size(400, 400);
+  size(800, 800);
 
   for (int i = 0; i < flies.length; ++i) {
     flies[i] = new Fly();
@@ -96,7 +123,7 @@ void setup() {
 void draw() {
 
   // Fade previous frame a bit
-  fill(0, 10);
+  fill(0, 20);
   rect(0, 0, width, height);
 
   noStroke();
