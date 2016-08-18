@@ -10,14 +10,14 @@ void addData() {
 	// Shot 1: worms on beach
 	Comp c = new Comp();
 	main.add(c);
-	c.add(0,still("beach.png")); // will stretch until end of worm-clip
-	c.add(0,seq("worm"));
-	c.add(10,seq(20,20,"worm"));
-	c.add(24,seq(200,100,"worm"));
-	c.add(48,seq(100,100,"frames", true));
+	c.add(0,0,still("beach.png")); // will stretch until end of worm-clip
+	c.add(0,1,seq("worm"));
+	c.add(10,2,seq(20,20,"worm"));
+	c.add(24,3,seq(200,100,"worm"));
+	c.add(48,4,seq(0,100,"frames", true));
 	
 	Track t = new Track(false);
-	c.add(0,t);
+	c.add(0,5,t);
 	t.add(sub(0,200,"Look at the worms!",2*24));
 	t.add(sub(0,200,"They are dancing :-)", 2*24));
 	t.add(sub(0,200,"We can add the text here :-)", 2*24));	
@@ -25,9 +25,9 @@ void addData() {
 	// Shot 2: happy guy
 	c = new Comp();
 	main.add(c);
-	c.add(0,still("flowers.png"));
-	c.add(0, seq("person", true));
-	c.add(0, sub("Look at all this text :-)", 5*24));
+	c.add(0,0,still("flowers.png"));
+	c.add(0,1, seq("person", true));
+	c.add(0,2, sub(0,100,"Look at all this text :-)", 5*24));
 	
 }
 
@@ -94,6 +94,7 @@ import java.util.LinkedList;
 import java.util.Stack;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.Collections;
 
 
 Track main = new Track(true); // repeat
@@ -275,58 +276,70 @@ class Still implements Clip {
 }
 
 //-------------------------
+class CS implements Comparable<CS> { // clip settings
+	Clip clip;
+	int z;
+	
+	CS(Clip clip, int z){this.clip = clip; this.z = z;}
+	
+	int compareTo(CS cs) {
+		return Integer.compare(this.z, cs.z);
+	}
+}
 
 //-------------------------
 
 class Comp implements Clip {
 
-  SortedMap<Integer,List<Clip>> map = new TreeMap<Integer,List<Clip>>();
+  SortedMap<Integer,List<CS>> map = new TreeMap<Integer,List<CS>>();
 
   int current;
-  List<Clip> active = new LinkedList<Clip>();
+  List<CS> active = new LinkedList<CS>();
 
   Comp() {
   }
 
-  public void add(int start, Clip clip) {
+  public void add(int start,  int z, Clip clip) {
 	  if(!map.containsKey(start)) {
-		  map.put(start,new LinkedList<Clip>());
+		  map.put(start,new LinkedList<CS>());
 	  }
-	  map.get(start).add(clip);
+	  map.get(start).add(new CS(clip, z));
   }
 
   public void draw() {
 	  
-    for (Clip cs : active ) {      
-        cs.draw();
+    for (CS cs : active ) {      
+        cs.clip.draw();
     }
   }
 
   public void rewind() {
     current = 0;
     
-    active = new LinkedList<Clip>();
+    active = new LinkedList<CS>();
     collectActive();
   }
   
   public void collectActive() {
 	  if(map.containsKey(current)) {
-		for(Clip c : map.get(current)) {
-			c.rewind();
-			active.add(c);
+		for(CS cs : map.get(current)) {
+			cs.clip.rewind();
+			active.add(cs);
 		}
 	  }
+	  
+	  Collections.sort(active);
   }
   
   public void advance() {
 	  current += 1;
 	  
 	  // Advance and remove current clips
-	  Iterator<Clip> iter = active.iterator();
+	  Iterator<CS> iter = active.iterator();
 	  while(iter.hasNext()) {
-		  Clip c = iter.next();
-		  c.advance();
-		  if(c.solid() && c.isDone()) {
+		  CS cs = iter.next();
+		  cs.clip.advance();
+		  if(cs.clip.solid() && cs.clip.isDone()) {
 			  iter.remove();
 		  }
 	  }
@@ -340,8 +353,8 @@ class Comp implements Clip {
 	  boolean done = false;
 	  
 	  boolean foundSolid = false;
-	  for(Clip c : active) {
-		  foundSolid |= c.solid();
+	  for(CS cs : active) {
+		  foundSolid |= cs.clip.solid();
 	  }
 	  
 	  done = current > map.lastKey() && !foundSolid;
@@ -351,9 +364,9 @@ class Comp implements Clip {
   public boolean solid() {	  
 	//When at least one solid
 	boolean solid= false;
-	for(List<Clip> l : map.values()) {
-		for(Clip c : l) {
-			solid |= c.solid();
+	for(List<CS> l : map.values()) {
+		for(CS cs : l) {
+			solid |= cs.clip.solid();
 		}
 	}
 	return solid;
