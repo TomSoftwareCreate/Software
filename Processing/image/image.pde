@@ -4,35 +4,62 @@
 
 void addData() {
 
-	main.add(sub("This is a movie", 48));
-	
-	//------------------------
-	// Shot 1: worms on beach
+  
+	movie2();
+	movie1();
+}
+
+void movie2() {
 	Comp c = new Comp();
+	
 	main.add(c);
-	c.add(0,0,still("beach.png")); // will stretch until end of worm-clip
-	c.add(0,1,seq("worm"));
-	c.add(10,2,seq(20,20,"worm"));
-	c.add(24,3,seq(200,100,"worm"));
-	c.add(48,4,seq(0,100,"frames", true));
+	
+	c.add(0,0,seq("walk", true));
+	c.add(0,0,towards(c, 200,0,12*24,1));
 	
 	Track t = new Track(false);
-	c.add(0,5,t);
-	t.add(sub(0,200,"Look at the worms!",2*24));
-	t.add(sub(0,200,"They are dancing :-)", 2*24));
-	t.add(sub(0,200,"We can add the text here :-)", 2*24));	
-	//-------------------
-	// Shot 2: happy guy
-	c = new Comp();
-	main.add(c);
-	c.add(0,0,still("flowers.png"));
-	c.add(0,1, seq("person", true));
-	c.add(0,2, sub(0,100,"Look at all this text :-)", 5*24));
+	c.add(2*24,1,t);
+	t.add(sub(0,50, "This is bob.", 24*4));
+	t.add(sub(0,50, "...", 24));
+	t.add(sub(0,50, "He likes walking.", 24*3));
+}
+
+void movie1() {
+	main.add(sub("This is a movie", 48));
 	
+	Comp c;
+
+  //------------------------
+  // Shot 1: worms on beach
+  c = new Comp();
+  main.add(c);
+  c.add(0,0,still("beach.png")); // will stretch until end of worm-clip
+  c.add(0,1,seq("worm"));
+  c.add(10,2,seq(20,20,"worm"));
+  c.add(24,3,seq(200,100,"worm"));
+  c.add(48,4,seq(0,100,"mushroom", true));
+
+  Track t = new Track(false);
+  c.add(0,5,t);
+  t.add(sub(0,200,"Look at the worms!",2*24));
+  t.add(sub(0,200,"They are dancing :-)", 2*24));
+  t.add(sub(0,200,"We can add the text here :-)", 2*24));	
+  //-------------------
+  // Shot 2: happy guy
+  c = new Comp();
+  main.add(c);
+  c.add(0, 0, still("flowers.png"));	
+  c.add(0, 1, seq("person", true));
+  c.add(0, 2, sub(0, 100, "Look at all this text :-)", 5*24));
+  c.add(0, 3, seq(100, 100, "walk", true));
 }
 
 
 //===================================
+
+Clip towards(Pawn p, float x, float y, int time, int rate) {
+  return new Towards(p, x, y, time, rate);
+}
 
 Clip seq(String folder) {
   return seq(0, 0, folder, false);
@@ -63,7 +90,7 @@ Clip sub(String text) {
 }
 
 Clip sub(float x, float y, String text) {
-  return new Sub(x, y, text,0);
+  return new Sub(x, y, text, 0);
 }
 
 Clip still(String file) {
@@ -111,7 +138,7 @@ void setup() {
 //===================================
 
 void draw() { 
-  background(125);
+  background(255);
 
   main.draw();
   main.advance();
@@ -140,6 +167,60 @@ interface Clip {
   boolean solid(); // when time influencing
 }
 
+interface Pawn {
+	void setPos(float x, float y);
+	float getX();
+	float getY();
+	void setRot(float angle);
+	void setScale(float scale);
+}
+
+//-------------------------
+class Towards implements Clip {
+	
+	Pawn pawn;
+	float x0, y0;
+	float x1; float y1;
+	int time;
+	int rate;
+	//
+	int current = 0;
+	
+	Towards(Pawn pawn, float x, float y, int time, int rate) {
+		this.pawn = pawn;
+		this.x0 = pawn.getX();
+		this.y0 = pawn.getY();
+		this.x1 = x;
+		this.y1 = y;
+		this.time = time;
+		this.rate = rate;
+	}
+	
+	void draw() {}
+  void rewind() {
+	  current = 0;
+	  }
+  void advance() {
+	  current += 1;
+	  
+	  if(current % rate == 0) {
+	  float t = (current*1.0f) / time;
+	  float u = 1.0f-t;
+	  
+	  float x = u*x0 + t*x1;
+	  float y = u*y0 + t*y1;
+	  pawn.setPos(x,y);
+  }
+	  }
+  boolean isDone() {
+	  return current > time;
+	  }
+  boolean solid() {
+	  return true;
+  }
+
+}
+
 //-------------------------
 class Track implements Clip {
   List<Clip> clips = new LinkedList<Clip>();
@@ -151,9 +232,9 @@ class Track implements Clip {
   public Track(boolean repeat) {		
     this.repeat = repeat;
   }
-  
+
   void add(Clip c) {
-	  clips.add(c);
+    clips.add(c);
   }
 
   public void rewind() {
@@ -192,14 +273,14 @@ class Track implements Clip {
       return true;
     }
   }
-  
+
   public boolean solid() {
-	  // When at least one solid
-	  boolean solid = false;
-	  for(Clip c : clips) {
-		  solid |= c.solid();
-	  }
-	  return solid;
+    // When at least one solid
+    boolean solid = false;
+    for (Clip c : clips) {
+      solid |= c.solid();
+    }
+    return solid;
   }
 }
 
@@ -236,9 +317,8 @@ class Sub implements Clip {
     return current >= length;
   }  
   public boolean solid() {
-	return length > 0;
-	}
-  
+    return length > 0;
+  }
 }
 
 //-------------------------
@@ -261,117 +341,159 @@ class Still implements Clip {
     image(image, x, y);
   }
   void rewind() {
-	  current = 0;
+    current = 0;
   }
   void advance() {
-	  current += 1;
+    current += 1;
   }
   boolean isDone() {
     return current >= length;
   }  
-  
+
   public boolean solid() {
-	return length > 0;
-	}
+    return length > 0;
+  }
 }
 
 //-------------------------
 class CS implements Comparable<CS> { // clip settings
-	Clip clip;
-	int z;
-	
-	CS(Clip clip, int z){this.clip = clip; this.z = z;}
-	
-	int compareTo(CS cs) {
-		return Integer.compare(this.z, cs.z);
-	}
+  Clip clip;
+  int z;
+
+  CS(Clip clip, int z) {
+    this.clip = clip; 
+    this.z = z;
+  }
+
+  int compareTo(CS cs) {
+    return Integer.compare(this.z, cs.z);
+  }
 }
 
 //-------------------------
 
-class Comp implements Clip {
+class Comp implements Clip, Pawn {
 
-  SortedMap<Integer,List<CS>> map = new TreeMap<Integer,List<CS>>();
+  SortedMap<Integer, List<CS>> map = new TreeMap<Integer, List<CS>>();
 
   int current;
   List<CS> active = new LinkedList<CS>();
+  //
+	float x; float y;
+	float angle;
+	float scale;
 
   Comp() {
   }
+  
+  float getX() {
+	  return x;
+  }
+  
+  float getY() {
+	  return y;
+  }
 
-  public void add(int start,  int z, Clip clip) {
-	  if(!map.containsKey(start)) {
-		  map.put(start,new LinkedList<CS>());
-	  }
-	  map.get(start).add(new CS(clip, z));
+void setPos(float x, float y) {
+	this.x = x;
+	this.y = y;
+	
+	//println("x : " + x + ", y: " + y);
+}
+
+
+	void setRot(float angle) {
+		this.angle = angle;
+	}
+	
+	void setScale(float scale) {
+		this.scale= scale;
+	}
+
+  public void add(int start, int z, Clip clip) {
+    if (!map.containsKey(start)) {
+      map.put(start, new LinkedList<CS>());
+    }
+    map.get(start).add(new CS(clip, z));
   }
 
   public void draw() {
+	  pushMatrix();
 	  
+	  translate(x,y);
+	  rotate(angle);
+	  scale(scale);
+
     for (CS cs : active ) {      
-        cs.clip.draw();
+      cs.clip.draw();
     }
+    
+    popMatrix();
   }
 
   public void rewind() {
+	  x = 0;
+	  y = 0;
+	  scale = 1;
+	  angle = 0;
+	  
     current = 0;
-    
+
     active = new LinkedList<CS>();
     collectActive();
   }
-  
-  public void collectActive() {
-	  if(map.containsKey(current)) {
-		for(CS cs : map.get(current)) {
-			cs.clip.rewind();
-			active.add(cs);
-		}
-	  }
-	  
-	  Collections.sort(active);
-  }
-  
-  public void advance() {
-	  current += 1;
-	  
-	  // Advance and remove current clips
-	  Iterator<CS> iter = active.iterator();
-	  while(iter.hasNext()) {
-		  CS cs = iter.next();
-		  cs.clip.advance();
-		  if(cs.clip.solid() && cs.clip.isDone()) {
-			  iter.remove();
-		  }
-	  }
-	  
-	  // See if more clips become active now
-	  collectActive();    
-  }
-  
-  public boolean isDone() {
-	  // not done while at least one solid 
-	  boolean done = false;
-	  
-	  boolean foundSolid = false;
-	  for(CS cs : active) {
-		  foundSolid |= cs.clip.solid();
-	  }
-	  
-	  done = current > map.lastKey() && !foundSolid;
-	  return done;
-  }
-  
-  public boolean solid() {	  
-	//When at least one solid
-	boolean solid= false;
-	for(List<CS> l : map.values()) {
-		for(CS cs : l) {
-			solid |= cs.clip.solid();
-		}
-	}
-	return solid;
-	}
 
+  public void collectActive() {
+    if (map.containsKey(current)) {
+      for (CS cs : map.get(current)) {
+        cs.clip.rewind();
+        active.add(cs);
+      }
+    }
+
+    Collections.sort(active);
+  }
+
+  public void advance() {
+    current += 1;
+
+    // Advance and remove current clips
+    Iterator<CS> iter = active.iterator();
+    while (iter.hasNext()) {
+      CS cs = iter.next();
+      cs.clip.advance();
+      if (cs.clip.solid() && cs.clip.isDone()) {
+        iter.remove();
+      }
+    }
+
+    // See if more clips become active now
+    collectActive();
+  }
+
+  public boolean isDone() {
+    // not done while at least one solid 
+    boolean done = false;
+
+    boolean foundSolid = false;
+    for (CS cs : active) {
+      foundSolid |= cs.clip.solid();
+    }
+
+    done = current > map.lastKey() && !foundSolid;
+    return done;
+  }
+
+  public boolean solid() {	  
+    //When at least one solid
+    boolean solid= false;
+    for (List<CS> l : map.values()) {
+      for (CS cs : l) {
+        solid |= cs.clip.solid();
+      }
+    }
+    return solid;
+  }
 }
 
 
@@ -425,9 +547,9 @@ class Imgseq implements Clip {
   }
   public void advance() {
     current += 1;
-    if(current == length() && repeat) {
-		rewind();
-	}
+    if (current == length() && repeat) {
+      rewind();
+    }
   }
   public boolean isDone() {
     return current > last;
@@ -436,8 +558,8 @@ class Imgseq implements Clip {
   public int length() {
     return last-first + 1;
   }
-  
+
   public boolean solid() {  
-	  return !repeat && length() > 0;
+    return !repeat && length() > 0;
   }
 }
