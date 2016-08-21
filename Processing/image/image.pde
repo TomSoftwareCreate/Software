@@ -3,47 +3,51 @@
 //===================================
 
 void addData() {
-
-  
-	movie2();
-	movie1();
+  movie2();
+  //movie1();
 }
 
 void movie2() {
-	Comp c = new Comp();
-	
-	main.add(c);
-	
-	c.add(0,0,seq("walk", true));
-	c.add(0,0,towards(c, 200,0,12*24,1));
-	
-	Track t = new Track(false);
-	c.add(2*24,1,t);
-	t.add(sub(0,50, "This is bob.", 24*4));
-	t.add(sub(0,50, "...", 24));
-	t.add(sub(0,50, "He likes walking.", 24*3));
+  Comp c = new Comp();
+  main.add(c);
+
+  {
+    Comp walk = new Comp();
+    c.add(0, 0, walk);
+    walk.add(0, 0, seq("walk", true));
+    walk.add(0, 0, towards(walk, 300, 0, 14*24, 1));
+
+    Track t = new Track(false);
+    walk.add(2*24, 1, t);
+    t.add(sub(0, 50, "This is bob.", 24*4));
+    t.add(sub(0, 50, "...", 24));
+    t.add(sub(0, 50, "He likes walking.", 24*3));
+  }
+
+  c.add(3*24, 2, new Say("bob.png", "Hello :-)", 100, 5*24, 24*1));
+  c.add(10*24, 2, new Say("bob.png", "Yes, indeed :-)", 100, 3*24, 24*1));
 }
 
 void movie1() {
-	main.add(sub("This is a movie", 48));
-	
-	Comp c;
+  main.add(sub("This is a movie", 48));
+
+  Comp c;
 
   //------------------------
   // Shot 1: worms on beach
   c = new Comp();
   main.add(c);
-  c.add(0,0,still("beach.png")); // will stretch until end of worm-clip
-  c.add(0,1,seq("worm"));
-  c.add(10,2,seq(20,20,"worm"));
-  c.add(24,3,seq(200,100,"worm"));
-  c.add(48,4,seq(0,100,"mushroom", true));
+  c.add(0, 0, still("beach.png")); // will stretch until end of worm-clip
+  c.add(0, 1, seq("worm"));
+  c.add(10, 2, seq(20, 20, "worm"));
+  c.add(24, 3, seq(200, 100, "worm"));
+  c.add(48, 4, seq(0, 100, "mushroom", true));
 
   Track t = new Track(false);
-  c.add(0,5,t);
-  t.add(sub(0,200,"Look at the worms!",2*24));
-  t.add(sub(0,200,"They are dancing :-)", 2*24));
-  t.add(sub(0,200,"We can add the text here :-)", 2*24));	
+  c.add(0, 5, t);
+  t.add(sub(0, 200, "Look at the worms!", 2*24));
+  t.add(sub(0, 200, "They are dancing :-)", 2*24));
+  t.add(sub(0, 200, "We can add the text here :-)", 2*24));	
   //-------------------
   // Shot 2: happy guy
   c = new Comp();
@@ -168,57 +172,121 @@ interface Clip {
 }
 
 interface Pawn {
-	void setPos(float x, float y);
-	float getX();
-	float getY();
-	void setRot(float angle);
-	void setScale(float scale);
+  void setPos(float x, float y);
+  float getX();
+  float getY();
+  void setRot(float angle);
+  void setScale(float scale);
+}
+
+//-------------------------
+class Say implements Clip {
+  PImage icon;
+  String text;
+  int fade;
+  int time;
+  int h;
+  //
+  int current;
+
+  Say(String strIcon, String text, int h, int time, int fade) {
+    this.icon = loadImage(strIcon);
+    this.text = text;
+    this.time = time;
+    this.fade = fade;
+    this.h = h;
+  }
+
+  void draw() {
+    int buf = 20;
+
+    int w = width-2*buf;
+    int iw = (int)(w*0.1f);
+
+    int h1 = height-h-buf;
+    int h2 = height-buf;
+
+    int alpha = 255;
+    if (current < fade) {
+      alpha = (int)map(current, 0, fade, 0, 255);
+      tint(255, alpha);
+      fill(0, alpha);
+    } else if (current > time-fade) {
+      alpha = (int)map(current, time-fade, time, 255, 0);
+      tint(255, alpha);
+      fill(0, alpha);
+    }
+
+    imageMode(CORNERS);		
+    image(icon, buf, h1, buf+iw, h2);
+    imageMode(CORNER);
+    rectMode(CORNERS);
+    text(text, buf+iw+buf, h1, width-buf, h2);
+    rectMode(CORNER);
+
+    noTint();
+    fill(0);
+  }
+  void rewind() {
+    current = 0;
+  }
+
+  void advance() {
+    current += 1;
+  }
+  boolean isDone() {
+    return current > time;
+  }
+  boolean solid() {
+    return true;
+  }
 }
 
 //-------------------------
 class Towards implements Clip {
-	
-	Pawn pawn;
-	float x0, y0;
-	float x1; float y1;
-	int time;
-	int rate;
-	//
-	int current = 0;
-	
-	Towards(Pawn pawn, float x, float y, int time, int rate) {
-		this.pawn = pawn;
-		this.x0 = pawn.getX();
-		this.y0 = pawn.getY();
-		this.x1 = x;
-		this.y1 = y;
-		this.time = time;
-		this.rate = rate;
-	}
-	
-	void draw() {}
-  void rewind() {
-	  current = 0;
-	  }
-  void advance() {
-	  current += 1;
-	  
-	  if(current % rate == 0) {
-	  float t = (current*1.0f) / time;
-	  float u = 1.0f-t;
-	  
-	  float x = u*x0 + t*x1;
-	  float y = u*y0 + t*y1;
-	  pawn.setPos(x,y);
-  }
-	  }
-  boolean isDone() {
-	  return current > time;
-	  }
-  boolean solid() {
-	  return true;
+
+  Pawn pawn;
+  float x0, y0;
+  float x1; 
+  float y1;
+  int time;
+  int rate;
+  //
+  int current = 0;
+
+  Towards(Pawn pawn, float x, float y, int time, int rate) {
+    this.pawn = pawn;
+    this.x0 = pawn.getX();
+    this.y0 = pawn.getY();
+    this.x1 = x;
+    this.y1 = y;
+    this.time = time;
+    this.rate = rate;
   }
 
+  void draw() {
+  }
+  void rewind() {
+    current = 0;
+  }
+  void advance() {
+    current += 1;
+
+    if (current % rate == 0) {
+      float t = (current*1.0f) / time;
+      float u = 1.0f-t;
+
+      float x = u*x0 + t*x1;
+      float y = u*y0 + t*y1;
+      pawn.setPos(x, y);
+    }
+  }
+  boolean isDone() {
+    return current > time;
+  }
+  boolean solid() {
+    return true;
+  }
 }
 
 //-------------------------
@@ -379,36 +447,37 @@ class Comp implements Clip, Pawn {
   int current;
   List<CS> active = new LinkedList<CS>();
   //
-	float x; float y;
-	float angle;
-	float scale;
+  float x; 
+  float y;
+  float angle;
+  float scale;
 
   Comp() {
   }
-  
+
   float getX() {
-	  return x;
+    return x;
   }
-  
+
   float getY() {
-	  return y;
+    return y;
   }
 
-void setPos(float x, float y) {
-	this.x = x;
-	this.y = y;
-	
-	//println("x : " + x + ", y: " + y);
-}
+  void setPos(float x, float y) {
+    this.x = x;
+    this.y = y;
+
+    //println("x : " + x + ", y: " + y);
+  }
 
 
-	void setRot(float angle) {
-		this.angle = angle;
-	}
-	
-	void setScale(float scale) {
-		this.scale= scale;
-	}
+  void setRot(float angle) {
+    this.angle = angle;
+  }
+
+  void setScale(float scale) {
+    this.scale= scale;
+  }
 
   public void add(int start, int z, Clip clip) {
     if (!map.containsKey(start)) {
@@ -418,25 +487,25 @@ void setPos(float x, float y) {
   }
 
   public void draw() {
-	  pushMatrix();
-	  
-	  translate(x,y);
-	  rotate(angle);
-	  scale(scale);
+    pushMatrix();
+
+    translate(x, y);
+    rotate(angle);
+    scale(scale);
 
     for (CS cs : active ) {      
       cs.clip.draw();
     }
-    
+
     popMatrix();
   }
 
   public void rewind() {
-	  x = 0;
-	  y = 0;
-	  scale = 1;
-	  angle = 0;
-	  
+    x = 0;
+    y = 0;
+    scale = 1;
+    angle = 0;
+
     current = 0;
 
     active = new LinkedList<CS>();
