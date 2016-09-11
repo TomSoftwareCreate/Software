@@ -11,6 +11,8 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.geom.AffineTransform;
@@ -28,7 +30,8 @@ import java.util.TreeSet;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-public class hello extends JFrame implements MouseListener, MouseMotionListener, WindowListener, KeyListener {
+public class hello extends JFrame
+		implements MouseListener, MouseMotionListener, WindowListener, MouseWheelListener, KeyListener {
 
 	interface Paintable {
 		public void paintIt(Graphics2D g);
@@ -43,9 +46,10 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 			g.setColor(Color.LIGHT_GRAY);
 			g.fillRect(0, 0, getWidth(), getHeight());
 
-//			g.setColor(Color.BLUE);
-//			g.drawRect(updaterect.x, updaterect.y, updaterect.width, updaterect.height);
-			
+			// g.setColor(Color.BLUE);
+			// g.drawRect(updaterect.x, updaterect.y, updaterect.width,
+			// updaterect.height);
+
 			g.setTransform(transform);
 			// Faces
 			g.setColor(Color.WHITE);
@@ -63,8 +67,7 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 				}
 				e.paintIt(g);
 			}
-			
-			
+
 		}
 	}
 
@@ -167,7 +170,11 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 	}
 	// ==============================================
 
-	float []data = new float[8]; // minX,minY,maxX,maxY,minX-t,minY-t,maxX-t,maxY-t
+	Point2D mouse = new Point2D.Float();
+	Point2D oldCam;
+	boolean modePan = false;
+	//
+	float[] data = new float[8]; // minX,minY,maxX,maxY,minX-t,minY-t,maxX-t,maxY-t
 	Rectangle updaterect = new Rectangle();
 	//
 	Line2D.Float line = new Line2D.Float();
@@ -178,6 +185,8 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 	int[] yPoints = new int[3];
 	//
 	AffineTransform transform = new AffineTransform(); // initially identity
+	float zoom = 1.5f;
+	float camX = 400, camY = 400;
 	//
 	Map<Integer, Point> vertices = new TreeMap<>();
 	Set<Edge> edges = new TreeSet<>();
@@ -215,10 +224,12 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 		this.addMouseMotionListener(this);
 		this.addWindowListener(this);
 		this.addKeyListener(this);
+		this.addMouseWheelListener(this);
 
 		setMinimumSize(new Dimension(800, 800));
 		setVisible(true);
 		setLocationRelativeTo(null);
+
 	}
 
 	// =================================================
@@ -258,6 +269,26 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 		}
 
 		return str.toString();
+	}
+
+	void updateCam() {
+		transform.setToIdentity();
+		// Applied in the read order
+		
+		transform.translate(getWidth() / 2, getHeight() / 2);
+		transform.scale(zoom, zoom);
+		transform.translate(-camX, -camY);		
+
+	}
+
+	Point2D toWorld(Point2D screen) {
+		Point2D world = new Point2D.Float();
+		try {
+			transform.inverseTransform(screen, world);
+		} catch (NoninvertibleTransformException ex) {
+			return null;
+		}
+		return world;
 	}
 
 	// =================================================
@@ -301,7 +332,8 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 
 	@Override
 	public void windowActivated(WindowEvent e) {
-		// TODO Auto-generated method stub
+
+		updateCam();
 
 	}
 
@@ -313,7 +345,21 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 
 	@Override
 	public void mouseDragged(MouseEvent e) {
-		// TODO Auto-generated method stub
+
+		// Mouse delta to world delta
+		Point2D.Float d = new Point2D.Float(e.getPoint().x - (float) mouse.getX(),
+				e.getPoint().y - (float) mouse.getY());
+		System.out.println("Drag delta: " + d);
+
+		 Point2D p = new Point2D.Float(-d.x / zoom, -d.y / zoom);
+//		Point2D p = new Point2D.Float(-d.x, -d.y);
+
+		if (modePan) {
+			camX = (float) (oldCam.getX() + p.getX());
+			camY = (float) (oldCam.getY() + p.getY());
+			updateCam();
+			repaint();
+		}
 
 	}
 
@@ -331,12 +377,15 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 
 	@Override
 	public void mousePressed(MouseEvent e) {
-		// TODO Auto-generated method stub
-
+		mouse.setLocation(e.getPoint());
+		oldCam = new Point2D.Float(camX, camY);
 	}
 
 	@Override
 	public void mouseReleased(MouseEvent event) {
+
+		if (event.getButton() != MouseEvent.BUTTON3)
+			return;
 
 		Point2D.Float mousePos = new Point2D.Float();
 		try {
@@ -349,7 +398,7 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 		float buf = 10;
 
 		selEdges.clear();
-		
+
 		for (Edge e : edges) {
 			Point p1 = vertices.get(e.v1);
 			Point p2 = vertices.get(e.v2);
@@ -360,24 +409,24 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 				System.out.println("Selected: " + e);
 			}
 		}
-		
+
 		// Repaint the involved region
-//		data[0] = Float.MAX_VALUE;
-//		data[1] = Float.MAX_VALUE;
-//		data[2] = Float.MIN_VALUE;
-//		data[3] = Float.MIN_VALUE;
-//		for(Edge e : selEdges) {
-//			Point p1 = vertices.get(e.v1);
-//			Point p2 = vertices.get(e.v2);
-//			data[0] = Math.min(data[0], Math.min(p1.x, p2.x)); // minX
-//			data[1] = Math.min(data[1], Math.min(p1.y, p2.y)); // minY
-//			data[2] = Math.max(data[2], Math.max(p1.x, p2.x)); // maxX
-//			data[3] = Math.max(data[3], Math.max(p1.y, p2.y)); // maxY
-//		}
-//		transform.transform(data,0,data,4,2);
-//		
-//		updaterect.setBounds((int)data[4],(int)data[5],(int)(data[6]-data[4]),(int)(data[7]-data[5]));
-//		repaint(updaterect.x,updaterect.y,updaterect.width,updaterect.height);
+		// data[0] = Float.MAX_VALUE;
+		// data[1] = Float.MAX_VALUE;
+		// data[2] = Float.MIN_VALUE;
+		// data[3] = Float.MIN_VALUE;
+		// for(Edge e : selEdges) {
+		// Point p1 = vertices.get(e.v1);
+		// Point p2 = vertices.get(e.v2);
+		// data[0] = Math.min(data[0], Math.min(p1.x, p2.x)); // minX
+		// data[1] = Math.min(data[1], Math.min(p1.y, p2.y)); // minY
+		// data[2] = Math.max(data[2], Math.max(p1.x, p2.x)); // maxX
+		// data[3] = Math.max(data[3], Math.max(p1.y, p2.y)); // maxY
+		// }
+		// transform.transform(data,0,data,4,2);
+		//
+		// updaterect.setBounds((int)data[4],(int)data[5],(int)(data[6]-data[4]),(int)(data[7]-data[5]));
+		// repaint(updaterect.x,updaterect.y,updaterect.width,updaterect.height);
 		repaint();
 	}
 
@@ -401,7 +450,9 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 
 	@Override
 	public void keyPressed(KeyEvent e) {
-		// TODO Auto-generated method stub
+		if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+			modePan = true;
+		}
 
 	}
 
@@ -410,7 +461,20 @@ public class hello extends JFrame implements MouseListener, MouseMotionListener,
 		if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 			System.exit(0);
 		}
+		if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+			modePan = false;
+		}
 
+	}
+
+	@Override
+	public void mouseWheelMoved(MouseWheelEvent e) {
+		zoom += e.getWheelRotation() * 0.2f;
+		
+		zoom = Math.max(0.2f, Math.min(zoom, 5.0f));
+		
+		updateCam();
+		repaint();
 	}
 
 }
